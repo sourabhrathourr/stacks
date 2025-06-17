@@ -29,17 +29,16 @@
   "preferences": [
     {
       "name": "gqlToken",
-      "title": "API Token (Optional)",
-      "description": "Your Stacks API token from the gqlToken cookie. You can also set this up in the extension.",
+      "title": "API Token",
+      "description": "Your Stacks API token from the gqlToken cookie. Get it from betterstacks.com → Developer Tools → Application → Cookies → gqlToken",
       "type": "password",
-      "required": false
+      "required": true
     }
   ],
   "dependencies": {
     "@raycast/api": "^1.93.0",
     "@raycast/utils": "^1.17.0",
     "@types/node-fetch": "^2.6.12",
-    "firebase": "^10.8.0",
     "graphql": "^16.8.1",
     "graphql-request": "^6.1.0",
     "node-fetch": "^3.3.2"

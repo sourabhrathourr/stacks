@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import { ActionPanel, Action, Icon, Grid, Color, showToast, Toast, Cache } from "@raycast/api";
-import { executeQuery, getApiToken } from "./utils/graphql";
-import Welcome from "./components/Welcome";
-import TokenManagement from "./components/TokenManagement";
+import { ActionPanel, Action, Icon, Grid, Color, showToast, Toast, Cache, Detail, openExtensionPreferences } from "@raycast/api";
+import { executeQuery } from "./utils/graphql";
 
 // GraphQL query to fetch resources (links)
 const FETCH_RESOURCES_QUERY = `
@@ -104,32 +102,13 @@ export default function Command() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const perPage = 50; // Number of items per page
-  const [hasToken, setHasToken] = useState<boolean | null>(null);
   // Add a state to track initial load vs subsequent loads
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Check if token exists
+  // Load resources on mount
   useEffect(() => {
-    async function checkToken() {
-      try {
-        const token = await getApiToken();
-        setHasToken(!!token);
-      } catch (error) {
-        setHasToken(false);
-      }
-    }
-
-    checkToken();
+    fetchResources();
   }, []);
-
-  // Only fetch resources if we have a token
-  useEffect(() => {
-    if (hasToken === true) {
-      fetchResources();
-    } else if (hasToken === false) {
-      setIsLoading(false);
-    }
-  }, [hasToken]);
 
   async function fetchResources(loadMore = false, forceRefresh = false) {
     try {
@@ -197,40 +176,21 @@ export default function Command() {
 
       // Update hasMore flag
       setHasMore(transformedResources.length >= perPage);
+      
+      // Clear any previous error
+      setError(null);
     } catch (error) {
-      // Check if the error is related to authentication/token
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const isAuthError =
-        errorMsg.toLowerCase().includes("unauthorized") ||
-        errorMsg.toLowerCase().includes("authentication") ||
-        errorMsg.toLowerCase().includes("token") ||
-        errorMsg.toLowerCase().includes("access denied") ||
-        errorMsg.toLowerCase().includes("permission");
-
-      if (isAuthError) {
-        setError("Authentication error: Your API token may be invalid or expired");
-
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Authentication Error",
-          message: "Please check your API token in settings",
-          primaryAction: {
-            title: "Manage Token",
-            onAction: () => {
-              // We can't directly push to TokenManagement here,
-              // but we'll let the user know to use the action
-            },
-          },
-        });
-      } else {
-        setError(`Error fetching resources: ${errorMsg}`);
-
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to fetch resources",
-          message: errorMsg,
-        });
-      }
+      console.error("Error fetching resources:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch resources";
+      setError(errorMessage);
+      
+      // Show error toast
+      showToast({
+        style: Toast.Style.Failure,
+        title: "Error fetching resources",
+        message: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -256,20 +216,48 @@ export default function Command() {
 
   // Reset and fetch when search text changes
   useEffect(() => {
-    // Only fetch if we have a token
-    if (hasToken) {
-      // Use a slight delay to avoid visual jitter when typing quickly
-      const debounceTimeout = setTimeout(() => {
-        fetchResources(false);
-      }, 300);
+    // Use a slight delay to avoid visual jitter when typing quickly
+    const debounceTimeout = setTimeout(() => {
+      fetchResources(false);
+    }, 300);
 
-      return () => clearTimeout(debounceTimeout);
-    }
-  }, [searchText, hasToken]);
+    return () => clearTimeout(debounceTimeout);
+  }, [searchText]);
 
-  // Show welcome screen if no token is set
-  if (hasToken === false) {
-    return <Welcome onComplete={() => setHasToken(true)} />;
+
+
+  // Show error state if there's an authentication error
+  if (error && error.includes("API token not found")) {
+    return (
+      <Detail
+        markdown={`
+# API Token Required
+
+Please configure your Stacks API token in the extension preferences to use this extension.
+
+## How to find your token
+
+1. Open betterstacks.com and make sure you're logged in
+2. Open browser developer tools (Right-click → Inspect or Cmd+Option+I)
+3. Navigate to 'Application' tab (Chrome) or 'Storage' tab (Firefox)
+4. Expand the 'Cookies' section
+5. Select the betterstacks.com domain
+6. Find the 'gqlToken' cookie
+7. Copy the cookie value
+
+Your token is stored securely and only used to communicate with the Stacks API.
+        `}
+        actions={
+          <ActionPanel>
+            <Action
+              title="Open Extension Preferences"
+              icon={Icon.Gear}
+              onAction={openExtensionPreferences}
+            />
+          </ActionPanel>
+        }
+      />
+    );
   }
 
   return (
@@ -303,9 +291,9 @@ export default function Command() {
       }
     >
       {resources.length > 0 ? (
-        resources.map((resource, index) => (
+        resources.map((resource) => (
           <Grid.Item
-            key={`${resource.id}-${index}`}
+            key={resource.id}
             content={{
               source: resource.thumbnail || getIconForResourceType(resource.type),
               fallback: getIconForResourceType(resource.type),
@@ -329,9 +317,11 @@ export default function Command() {
                     onAction={handleRefresh}
                     shortcut={{ modifiers: ["cmd"], key: "r" }}
                   />
-                </ActionPanel.Section>
-                <ActionPanel.Section>
-                  <Action.Push title="Manage Api Token" icon={Icon.Key} target={<TokenManagement />} />
+                  <Action
+                    title="Open Extension Preferences"
+                    icon={Icon.Gear}
+                    onAction={openExtensionPreferences}
+                  />
                 </ActionPanel.Section>
               </ActionPanel>
             }
@@ -356,7 +346,11 @@ export default function Command() {
                 onAction={handleRefresh}
                 shortcut={{ modifiers: ["cmd"], key: "r" }}
               />
-              <Action.Push title="Manage Api Token" icon={Icon.Key} target={<TokenManagement />} />
+              <Action
+                title="Open Extension Preferences"
+                icon={Icon.Gear}
+                onAction={openExtensionPreferences}
+              />
             </ActionPanel>
           }
         />
