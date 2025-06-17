@@ -14,15 +14,8 @@
     {
       "name": "search-resources",
       "title": "Stacks Search",
-      "subtitle": "Grid view of your resources",
-      "description": "Search your saved resources in a grid view",
-      "mode": "view"
-    },
-    {
-      "name": "search-resources-list",
-      "title": "Stacks Search List",
-      "subtitle": "Detailed list view of your resources",
-      "description": "Search your saved resources in a detailed list view with previews",
+      "subtitle": "Search your resources",
+      "description": "Search your saved resources with grid or list view",
       "mode": "view"
     }
   ],
@@ -33,6 +26,24 @@
       "description": "Your Stacks API token from the gqlToken cookie. Get it from betterstacks.com → Developer Tools → Application → Cookies → gqlToken",
       "type": "password",
       "required": true
+    },
+    {
+      "name": "viewType",
+      "title": "View Type",
+      "description": "Choose how to display your resources",
+      "type": "dropdown",
+      "required": false,
+      "default": "grid",
+      "data": [
+        {
+          "title": "Grid View",
+          "value": "grid"
+        },
+        {
+          "title": "List View",
+          "value": "list"
+        }
+      ]
     }
   ],
   "dependencies": {

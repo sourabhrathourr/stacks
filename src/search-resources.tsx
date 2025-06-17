@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ActionPanel, Action, Icon, Grid, Color, showToast, Toast, Cache, Detail, openExtensionPreferences } from "@raycast/api";
+import { ActionPanel, Action, Icon, Grid, List, Color, showToast, Toast, Cache, Detail, openExtensionPreferences, Image, getPreferenceValues } from "@raycast/api";
 import { executeQuery } from "./utils/graphql";
 
 // GraphQL query to fetch resources (links)
@@ -30,13 +30,19 @@ const FETCH_RESOURCES_QUERY = `
       target_url
       title
       updated_at
+      user {
+        email
+        name
+        profile_image_url
+        username
+      }
     }
   }
 `;
 
 // Initialize cache
 const resourceCache = new Cache({
-  namespace: "stacks-resources-grid",
+  namespace: "stacks-resources",
 });
 
 // Define the Link type from the API
@@ -53,6 +59,13 @@ interface LinkData {
   summary?: string;
   created_at?: string;
   updated_at?: string;
+  tags?: string[];
+  user?: {
+    email?: string;
+    name?: string;
+    profile_image_url?: string;
+    username?: string;
+  };
 }
 
 interface Resource {
@@ -64,9 +77,22 @@ interface Resource {
   domain?: string;
   favicon_url?: string;
   description?: string;
+  summary?: string;
   created_at?: string;
   updated_at?: string;
   target_url: string;
+  tags?: string[];
+  user?: {
+    email?: string;
+    name?: string;
+    profile_image_url?: string;
+    username?: string;
+  };
+}
+
+interface Preferences {
+  gqlToken: string;
+  viewType: "grid" | "list";
 }
 
 // Function to get icon based on resource type
@@ -91,24 +117,48 @@ function getIconForResourceType(type: string) {
   }
 }
 
-// Grid View Command
+// Format date to a more readable format
+function formatDate(dateString?: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+// Main Search Command
 export default function Command() {
-  // Use the stored column value or default to 2
-  const [columns, setColumns] = useState(2);
+  // Get preferences
+  const preferences = getPreferenceValues<Preferences>();
+  const isGridView = preferences.viewType === "grid";
+  
+  // Shared state
   const [isLoading, setIsLoading] = useState(true);
-  // Initialize with empty array to prevent null rendering issues
   const [resources, setResources] = useState<Resource[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const perPage = 50; // Number of items per page
-  // Add a state to track initial load vs subsequent loads
+  const [searchText, setSearchText] = useState("");
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Grid-specific state
+  const [columns, setColumns] = useState(2);
+  
+  // Determine page size based on view type
+  const perPage = isGridView ? 50 : 20;
 
   // Load resources on mount
   useEffect(() => {
     fetchResources();
   }, []);
+
+  // Reset and fetch when search text changes
+  useEffect(() => {
+    // Use a slight delay to avoid visual jitter when typing quickly
+    const debounceTimeout = setTimeout(() => {
+      fetchResources(false);
+    }, 300);
+
+    return () => clearTimeout(debounceTimeout);
+  }, [searchText]);
 
   async function fetchResources(loadMore = false, forceRefresh = false) {
     try {
@@ -124,8 +174,8 @@ export default function Command() {
       // Get current page from state
       const currentPage = loadMore ? page + 1 : 1;
 
-      // Create cache key based on query parameters
-      const cacheKey = `${searchText || "all"}-page${currentPage}-perPage${perPage}`;
+      // Create cache key based on query parameters and view type
+      const cacheKey = `${preferences.viewType}-${searchText || "all"}-page${currentPage}-perPage${perPage}`;
 
       // Try to get from cache first (skip cache if forceRefresh is true)
       let data: { links: LinkData[] };
@@ -155,14 +205,22 @@ export default function Command() {
         type: link.link_type || "link",
         domain: link.domain,
         favicon_url: link.favicon_url,
-        description: link.description || link.summary,
+        description: link.description,
+        summary: link.summary,
         created_at: link.created_at,
         updated_at: link.updated_at,
+        tags: link.tags,
+        user: link.user,
       }));
 
       // If we're loading more, append to existing resources
       if (loadMore) {
-        setResources((prevResources) => [...prevResources, ...transformedResources]);
+        setResources((prevResources) => {
+          // Filter out any duplicates that might exist
+          const existingIds = new Set(prevResources.map(r => r.id));
+          const newResources = transformedResources.filter(r => !existingIds.has(r.id));
+          return [...prevResources, ...newResources];
+        });
         // Update page only when loading more
         setPage(currentPage);
       } else {
@@ -211,21 +269,6 @@ export default function Command() {
     });
   }
 
-  // Set up search state
-  const [searchText, setSearchText] = useState("");
-
-  // Reset and fetch when search text changes
-  useEffect(() => {
-    // Use a slight delay to avoid visual jitter when typing quickly
-    const debounceTimeout = setTimeout(() => {
-      fetchResources(false);
-    }, 300);
-
-    return () => clearTimeout(debounceTimeout);
-  }, [searchText]);
-
-
-
   // Show error state if there's an authentication error
   if (error && error.includes("API token not found")) {
     return (
@@ -260,101 +303,265 @@ Your token is stored securely and only used to communicate with the Stacks API.
     );
   }
 
-  return (
-    <Grid
-      columns={columns}
-      aspectRatio="16/9"
-      fit={Grid.Fit.Fill}
-      inset={Grid.Inset.Zero}
-      isLoading={isLoading}
-      searchBarPlaceholder="Search your resources..."
-      onSearchTextChange={setSearchText}
-      pagination={{
-        onLoadMore: () => fetchResources(true),
-        hasMore: hasMore,
-        pageSize: perPage,
-      }}
-      searchBarAccessory={
-        <Grid.Dropdown
-          tooltip="Grid Size"
-          storeValue
-          onChange={(newValue) => {
-            setColumns(parseInt(newValue));
-          }}
-        >
-          <Grid.Dropdown.Section title="Grid Size">
-            <Grid.Dropdown.Item title="Large" value="2" />
-            <Grid.Dropdown.Item title="Medium" value="3" />
-            <Grid.Dropdown.Item title="Small" value="4" />
-          </Grid.Dropdown.Section>
-        </Grid.Dropdown>
-      }
-    >
-      {resources.length > 0 ? (
-        resources.map((resource) => (
-          <Grid.Item
-            key={resource.id}
-            content={{
-              source: resource.thumbnail || getIconForResourceType(resource.type),
-              fallback: getIconForResourceType(resource.type),
-              tintColor: !resource.thumbnail ? Color.PrimaryText : undefined,
+  // Render based on view preference
+  if (isGridView) {
+    return (
+      <Grid
+        columns={columns}
+        aspectRatio="16/9"
+        fit={Grid.Fit.Fill}
+        inset={Grid.Inset.Zero}
+        isLoading={isLoading}
+        searchBarPlaceholder="Search your resources..."
+        onSearchTextChange={setSearchText}
+        pagination={{
+          onLoadMore: () => fetchResources(true),
+          hasMore: hasMore,
+          pageSize: perPage,
+        }}
+        searchBarAccessory={
+          <Grid.Dropdown
+            tooltip="Grid Size"
+            storeValue
+            onChange={(newValue) => {
+              setColumns(parseInt(newValue));
             }}
-            title={resource.title}
-            subtitle={resource.domain || resource.url}
+          >
+            <Grid.Dropdown.Section title="Grid Size">
+              <Grid.Dropdown.Item title="Large" value="2" />
+              <Grid.Dropdown.Item title="Medium" value="3" />
+              <Grid.Dropdown.Item title="Small" value="4" />
+            </Grid.Dropdown.Section>
+          </Grid.Dropdown>
+        }
+      >
+        {resources.length > 0 ? (
+          resources.map((resource) => (
+            <Grid.Item
+              key={resource.id}
+              content={{
+                source: resource.thumbnail || getIconForResourceType(resource.type),
+                fallback: getIconForResourceType(resource.type),
+                tintColor: !resource.thumbnail ? Color.PrimaryText : undefined,
+              }}
+              title={resource.title}
+              subtitle={resource.domain || resource.url}
+              actions={
+                <ActionPanel>
+                  <ActionPanel.Section>
+                    <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
+                    <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
+                    {resource.description && (
+                      <Action.CopyToClipboard content={resource.description} title="Copy Description" icon={Icon.Text} />
+                    )}
+                  </ActionPanel.Section>
+                  <ActionPanel.Section>
+                    <Action
+                      title="Refresh"
+                      icon={Icon.ArrowClockwise}
+                      onAction={handleRefresh}
+                      shortcut={{ modifiers: ["cmd"], key: "r" }}
+                    />
+                    <Action
+                      title="Open Extension Preferences"
+                      icon={Icon.Gear}
+                      onAction={openExtensionPreferences}
+                    />
+                  </ActionPanel.Section>
+                </ActionPanel>
+              }
+            />
+          ))
+        ) : (
+          <Grid.EmptyView
+            title={error || (searchText ? `No Results for "${searchText}"` : "No Resources Found")}
+            description={
+              error
+                ? "Please try again or check your connection"
+                : searchText
+                  ? "Try different search terms or clear the search"
+                  : "Start saving resources to see them here"
+            }
+            icon={error ? Icon.ExclamationMark : searchText ? Icon.MagnifyingGlass : Icon.Bookmark}
             actions={
               <ActionPanel>
-                <ActionPanel.Section>
-                  <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
-                  <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
-                  {resource.description && (
-                    <Action.CopyToClipboard content={resource.description} title="Copy Description" icon={Icon.Text} />
-                  )}
-                </ActionPanel.Section>
-                <ActionPanel.Section>
-                  <Action
-                    title="Refresh"
-                    icon={Icon.ArrowClockwise}
-                    onAction={handleRefresh}
-                    shortcut={{ modifiers: ["cmd"], key: "r" }}
-                  />
-                  <Action
-                    title="Open Extension Preferences"
-                    icon={Icon.Gear}
-                    onAction={openExtensionPreferences}
-                  />
-                </ActionPanel.Section>
+                <Action
+                  title="Refresh"
+                  icon={Icon.ArrowClockwise}
+                  onAction={handleRefresh}
+                  shortcut={{ modifiers: ["cmd"], key: "r" }}
+                />
+                <Action
+                  title="Open Extension Preferences"
+                  icon={Icon.Gear}
+                  onAction={openExtensionPreferences}
+                />
               </ActionPanel>
             }
           />
-        ))
-      ) : (
-        <Grid.EmptyView
-          title={error || (searchText ? `No Results for "${searchText}"` : "No Resources Found")}
-          description={
-            error
-              ? "Please try again or check your connection"
-              : searchText
-                ? "Try different search terms or clear the search"
-                : "Start saving resources to see them here"
-          }
-          icon={error ? Icon.ExclamationMark : searchText ? Icon.MagnifyingGlass : Icon.Bookmark}
-          actions={
-            <ActionPanel>
-              <Action
-                title="Refresh"
-                icon={Icon.ArrowClockwise}
-                onAction={handleRefresh}
-                shortcut={{ modifiers: ["cmd"], key: "r" }}
-              />
-              <Action
-                title="Open Extension Preferences"
-                icon={Icon.Gear}
-                onAction={openExtensionPreferences}
-              />
-            </ActionPanel>
-          }
-        />
-      )}
-    </Grid>
-  );
+        )}
+      </Grid>
+    );
+  } else {
+    return (
+      <List
+        isLoading={isLoading}
+        searchBarPlaceholder="Search your resources..."
+        isShowingDetail
+        onSearchTextChange={setSearchText}
+        pagination={{
+          onLoadMore: () => fetchResources(true),
+          hasMore: hasMore,
+          pageSize: perPage,
+        }}
+      >
+        {resources.length > 0 ? (
+          resources.map((resource, index) => (
+            <List.Item
+              key={`${resource.id}-${index}`}
+              icon={
+                resource.favicon_url
+                  ? {
+                      source: resource.favicon_url,
+                      fallback: getIconForResourceType(resource.type),
+                      mask: Image.Mask.RoundedRectangle,
+                    }
+                  : getIconForResourceType(resource.type)
+              }
+              title={resource.title}
+              actions={
+                <ActionPanel>
+                  <ActionPanel.Section>
+                    <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
+                    <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
+                    {resource.description && (
+                      <Action.CopyToClipboard content={resource.description} title="Copy Description" icon={Icon.Text} />
+                    )}
+                  </ActionPanel.Section>
+                  <ActionPanel.Section>
+                    <Action
+                      title="Refresh"
+                      icon={Icon.ArrowClockwise}
+                      onAction={handleRefresh}
+                      shortcut={{ modifiers: ["cmd"], key: "r" }}
+                    />
+                    <Action
+                      title="Open Extension Preferences"
+                      icon={Icon.Gear}
+                      onAction={openExtensionPreferences}
+                    />
+                  </ActionPanel.Section>
+                </ActionPanel>
+              }
+              detail={
+                <List.Item.Detail
+                  markdown={
+                    resource.thumbnail
+                      ? `![](${resource.thumbnail})`
+                      : `# ${resource.title || "Resource"}\n\n*No image available for this resource*`
+                  }
+                  metadata={
+                    <List.Item.Detail.Metadata>
+                      <List.Item.Detail.Metadata.Label title="Title" text={resource.title} />
+
+                      <List.Item.Detail.Metadata.Separator />
+
+                      {resource.description && (
+                        <List.Item.Detail.Metadata.Label
+                          title="Description"
+                          text={
+                            resource.description.length > 200
+                              ? resource.description.substring(0, 200) + "..."
+                              : resource.description
+                          }
+                        />
+                      )}
+
+                      <List.Item.Detail.Metadata.Separator />
+
+                      <List.Item.Detail.Metadata.Label
+                        title="URL"
+                        text={resource.url.length > 60 ? resource.url.substring(0, 60) + "..." : resource.url}
+                        icon={Icon.Link}
+                      />
+
+                      <List.Item.Detail.Metadata.Separator />
+
+                      <List.Item.Detail.Metadata.Label
+                        title="Added"
+                        text={formatDate(resource.created_at)}
+                        icon={Icon.Calendar}
+                      />
+
+                      <List.Item.Detail.Metadata.Separator />
+
+                      {resource.tags && resource.tags.length > 0 && (
+                        <>
+                          <List.Item.Detail.Metadata.TagList title="Tags">
+                            {resource.tags.map((tag, tagIndex) => (
+                              <List.Item.Detail.Metadata.TagList.Item 
+                                key={`${resource.id}-tag-${tagIndex}-${tag}`} 
+                                text={tag} 
+                                color={Color.Blue} 
+                              />
+                            ))}
+                          </List.Item.Detail.Metadata.TagList>
+
+                          <List.Item.Detail.Metadata.Separator />
+                        </>
+                      )}
+
+                      {resource.user && (
+                        <List.Item.Detail.Metadata.Label
+                          title="Added by"
+                          text={resource.user.name || resource.user.username || resource.user.email || "Unknown user"}
+                          icon={
+                            resource.user.profile_image_url
+                              ? {
+                                  source: resource.user.profile_image_url,
+                                  mask: Image.Mask.Circle,
+                                }
+                              : Icon.Person
+                          }
+                        />
+                      )}
+
+                      <List.Item.Detail.Metadata.Separator />
+                    </List.Item.Detail.Metadata>
+                  }
+                />
+              }
+            />
+          ))
+        ) : (
+          <List.EmptyView
+            title={error || (searchText ? `No Results for "${searchText}"` : "No Resources Found")}
+            description={
+              error
+                ? "Please try again or check your connection"
+                : searchText
+                  ? "Try different search terms or clear the search"
+                  : "Start saving resources to see them here"
+            }
+            icon={error ? Icon.ExclamationMark : searchText ? Icon.MagnifyingGlass : Icon.Bookmark}
+            actions={
+              <ActionPanel>
+                <Action
+                  title="Refresh"
+                  icon={Icon.ArrowClockwise}
+                  onAction={handleRefresh}
+                  shortcut={{ modifiers: ["cmd"], key: "r" }}
+                />
+                <Action
+                  title="Open Extension Preferences"
+                  icon={Icon.Gear}
+                  onAction={openExtensionPreferences}
+                />
+              </ActionPanel>
+            }
+          />
+        )}
+      </List>
+    );
+  }
 }

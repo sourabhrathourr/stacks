@@ -5,6 +5,7 @@ const API_URL = "https://betterstacks.com/graphql";
 
 interface Preferences {
   gqlToken: string;
+  viewType: "grid" | "list";
 }
 
 // Get API token from preferences
