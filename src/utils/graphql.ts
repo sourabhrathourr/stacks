@@ -40,3 +40,22 @@ export async function executeMutation<T>(mutation: string, variables?: Record<st
   const client = getGraphQLClient();
   return client.request<T>(mutation, variables);
 }
+
+// Add link mutation
+export async function addLink(input: { target_url: string }) {
+  const mutation = `
+    mutation Add_link($input: AddLinkInput!) {
+      add_link(input: $input) {
+        title
+        id
+        target_url
+        description
+      }
+    }
+  `;
+
+  return executeMutation<{ add_link: { title: string; id: string; target_url: string; description: string } }>(
+    mutation,
+    { input }
+  );
+}

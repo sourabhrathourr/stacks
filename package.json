@@ -17,6 +17,21 @@
       "subtitle": "Search your resources",
       "description": "Search your saved resources with grid or list view",
       "mode": "view"
+    },
+    {
+      "name": "add-link",
+      "title": "Add Link to Stacks",
+      "subtitle": "Save a new link",
+      "description": "Add a new link to your Stacks workspace with automatic metadata detection",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "url",
+          "placeholder": "https://example.com",
+          "type": "text",
+          "required": false
+        }
+      ]
     }
   ],
   "preferences": [
