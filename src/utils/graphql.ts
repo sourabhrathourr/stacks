@@ -56,6 +56,6 @@ export async function addLink(input: { target_url: string }) {
 
   return executeMutation<{ add_link: { title: string; id: string; target_url: string; description: string } }>(
     mutation,
-    { input }
+    { input },
   );
 }

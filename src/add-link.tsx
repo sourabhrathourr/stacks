@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { 
-  ActionPanel, 
-  Action, 
-  Form, 
-  showToast, 
-  Toast, 
-  Icon, 
+import {
+  ActionPanel,
+  Action,
+  Form,
+  showToast,
+  Toast,
+  Icon,
   LaunchProps,
   openExtensionPreferences,
   Detail,
   popToRoot,
-  open
+  open,
 } from "@raycast/api";
 import { addLink } from "./utils/graphql";
 
@@ -74,12 +74,11 @@ export default function AddLinkCommand(props: LaunchProps<{ arguments: Arguments
       // Reset form and go back
       setUrl("");
       popToRoot();
-
     } catch (error) {
       console.error("Error adding link:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to add link";
       setError(errorMessage);
-      
+
       await showToast({
         style: Toast.Style.Failure,
         title: "Failed to add link",
@@ -113,11 +112,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
         `}
         actions={
           <ActionPanel>
-            <Action
-              title="Open Extension Preferences"
-              icon={Icon.Gear}
-              onAction={openExtensionPreferences}
-            />
+            <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
           </ActionPanel>
         }
       />
@@ -130,11 +125,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
       navigationTitle="Add Link to Stacks"
       actions={
         <ActionPanel>
-          <Action.SubmitForm
-            title="Add Link"
-            icon={Icon.Plus}
-            onSubmit={handleSubmit}
-          />
+          <Action.SubmitForm title="Add Link" icon={Icon.Plus} onSubmit={handleSubmit} />
           <ActionPanel.Section>
             <Action
               title="Clear URL"
@@ -147,11 +138,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
             />
           </ActionPanel.Section>
           <ActionPanel.Section>
-            <Action
-              title="Open Extension Preferences"
-              icon={Icon.Gear}
-              onAction={openExtensionPreferences}
-            />
+            <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
           </ActionPanel.Section>
         </ActionPanel>
       }
@@ -169,12 +156,9 @@ Your token is stored securely and only used to communicate with the Stacks API.
       {error && !error.includes("API token") && !error.includes("URL") && (
         <>
           <Form.Separator />
-          <Form.Description 
-            title="Error" 
-            text={`❌ ${error}`} 
-          />
+          <Form.Description title="Error" text={`❌ ${error}`} />
         </>
       )}
     </Form>
   );
-} 
+}

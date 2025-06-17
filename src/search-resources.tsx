@@ -1,5 +1,19 @@
 import { useState, useEffect } from "react";
-import { ActionPanel, Action, Icon, Grid, List, Color, showToast, Toast, Cache, Detail, openExtensionPreferences, Image, getPreferenceValues } from "@raycast/api";
+import {
+  ActionPanel,
+  Action,
+  Icon,
+  Grid,
+  List,
+  Color,
+  showToast,
+  Toast,
+  Cache,
+  Detail,
+  openExtensionPreferences,
+  Image,
+  getPreferenceValues,
+} from "@raycast/api";
 import { executeQuery } from "./utils/graphql";
 
 // GraphQL query to fetch resources (links)
@@ -129,7 +143,7 @@ export default function Command() {
   // Get preferences
   const preferences = getPreferenceValues<Preferences>();
   const isGridView = preferences.viewType === "grid";
-  
+
   // Shared state
   const [isLoading, setIsLoading] = useState(true);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -138,10 +152,10 @@ export default function Command() {
   const [hasMore, setHasMore] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  
+
   // Grid-specific state
   const [columns, setColumns] = useState(2);
-  
+
   // Determine page size based on view type
   const perPage = isGridView ? 50 : 20;
 
@@ -217,8 +231,8 @@ export default function Command() {
       if (loadMore) {
         setResources((prevResources) => {
           // Filter out any duplicates that might exist
-          const existingIds = new Set(prevResources.map(r => r.id));
-          const newResources = transformedResources.filter(r => !existingIds.has(r.id));
+          const existingIds = new Set(prevResources.map((r) => r.id));
+          const newResources = transformedResources.filter((r) => !existingIds.has(r.id));
           return [...prevResources, ...newResources];
         });
         // Update page only when loading more
@@ -234,15 +248,15 @@ export default function Command() {
 
       // Update hasMore flag
       setHasMore(transformedResources.length >= perPage);
-      
+
       // Clear any previous error
       setError(null);
     } catch (error) {
       console.error("Error fetching resources:", error);
-      
+
       const errorMessage = error instanceof Error ? error.message : "Failed to fetch resources";
       setError(errorMessage);
-      
+
       // Show error toast
       showToast({
         style: Toast.Style.Failure,
@@ -292,11 +306,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
         `}
         actions={
           <ActionPanel>
-            <Action
-              title="Open Extension Preferences"
-              icon={Icon.Gear}
-              onAction={openExtensionPreferences}
-            />
+            <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
           </ActionPanel>
         }
       />
@@ -352,7 +362,11 @@ Your token is stored securely and only used to communicate with the Stacks API.
                     <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
                     <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
                     {resource.description && (
-                      <Action.CopyToClipboard content={resource.description} title="Copy Description" icon={Icon.Text} />
+                      <Action.CopyToClipboard
+                        content={resource.description}
+                        title="Copy Description"
+                        icon={Icon.Text}
+                      />
                     )}
                   </ActionPanel.Section>
                   <ActionPanel.Section>
@@ -362,11 +376,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
                       onAction={handleRefresh}
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
                     />
-                    <Action
-                      title="Open Extension Preferences"
-                      icon={Icon.Gear}
-                      onAction={openExtensionPreferences}
-                    />
+                    <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
                   </ActionPanel.Section>
                 </ActionPanel>
               }
@@ -391,11 +401,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
                   onAction={handleRefresh}
                   shortcut={{ modifiers: ["cmd"], key: "r" }}
                 />
-                <Action
-                  title="Open Extension Preferences"
-                  icon={Icon.Gear}
-                  onAction={openExtensionPreferences}
-                />
+                <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
               </ActionPanel>
             }
           />
@@ -435,7 +441,11 @@ Your token is stored securely and only used to communicate with the Stacks API.
                     <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
                     <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
                     {resource.description && (
-                      <Action.CopyToClipboard content={resource.description} title="Copy Description" icon={Icon.Text} />
+                      <Action.CopyToClipboard
+                        content={resource.description}
+                        title="Copy Description"
+                        icon={Icon.Text}
+                      />
                     )}
                   </ActionPanel.Section>
                   <ActionPanel.Section>
@@ -445,11 +455,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
                       onAction={handleRefresh}
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
                     />
-                    <Action
-                      title="Open Extension Preferences"
-                      icon={Icon.Gear}
-                      onAction={openExtensionPreferences}
-                    />
+                    <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
                   </ActionPanel.Section>
                 </ActionPanel>
               }
@@ -499,10 +505,10 @@ Your token is stored securely and only used to communicate with the Stacks API.
                         <>
                           <List.Item.Detail.Metadata.TagList title="Tags">
                             {resource.tags.map((tag, tagIndex) => (
-                              <List.Item.Detail.Metadata.TagList.Item 
-                                key={`${resource.id}-tag-${tagIndex}-${tag}`} 
-                                text={tag} 
-                                color={Color.Blue} 
+                              <List.Item.Detail.Metadata.TagList.Item
+                                key={`${resource.id}-tag-${tagIndex}-${tag}`}
+                                text={tag}
+                                color={Color.Blue}
                               />
                             ))}
                           </List.Item.Detail.Metadata.TagList>
@@ -552,11 +558,7 @@ Your token is stored securely and only used to communicate with the Stacks API.
                   onAction={handleRefresh}
                   shortcut={{ modifiers: ["cmd"], key: "r" }}
                 />
-                <Action
-                  title="Open Extension Preferences"
-                  icon={Icon.Gear}
-                  onAction={openExtensionPreferences}
-                />
+                <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
               </ActionPanel>
             }
           />
