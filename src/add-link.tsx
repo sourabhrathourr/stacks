@@ -10,8 +10,8 @@ import {
   openExtensionPreferences,
   Detail,
   popToRoot,
-  open,
 } from "@raycast/api";
+import { showFailureToast } from "@raycast/utils";
 import { addLink } from "./utils/graphql";
 
 interface Arguments {
@@ -66,7 +66,7 @@ export default function AddLinkCommand(props: LaunchProps<{ arguments: Arguments
         primaryAction: {
           title: "View in Stacks",
           onAction: () => {
-            open("raycast://extensions/sourabh_rathour/stacks/search-resources");
+            popToRoot({ clearSearchBar: true });
           },
         },
       });
@@ -75,15 +75,7 @@ export default function AddLinkCommand(props: LaunchProps<{ arguments: Arguments
       setUrl("");
       popToRoot();
     } catch (error) {
-      console.error("Error adding link:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to add link";
-      setError(errorMessage);
-
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to add link",
-        message: errorMessage,
-      });
+      await showFailureToast(error, { title: "Failed to add link" });
     } finally {
       setIsLoading(false);
     }
