@@ -71,7 +71,7 @@ function handleGraphQLError(error: unknown): never {
     }
   }
 
-    // Handle GraphQL errors with better messages
+  // Handle GraphQL errors with better messages
   if (error && typeof error === "object") {
     const errorObj = error as {
       response?: {
@@ -79,7 +79,7 @@ function handleGraphQLError(error: unknown): never {
       };
       message?: string;
     };
-    
+
     // Extract meaningful error messages from GraphQL response
     if (errorObj.response?.errors && Array.isArray(errorObj.response.errors)) {
       const firstError = errorObj.response.errors[0];
@@ -87,12 +87,12 @@ function handleGraphQLError(error: unknown): never {
         throw new Error(`Stacks API error: ${firstError.message}`);
       }
     }
-    
+
     // Handle authentication errors specifically
     if (errorObj.message && typeof errorObj.message === "string" && errorObj.message.includes("401")) {
       throw new Error("Authentication failed. Please check your API token in extension preferences.");
     }
-    
+
     // If it has a message property, use it but make it more user-friendly
     if (errorObj.message && typeof errorObj.message === "string") {
       const message = errorObj.message;
