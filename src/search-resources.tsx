@@ -276,12 +276,12 @@ export default function Command() {
   }
 
   // Show error state if there's an authentication error or invalid token
-  const isTokenError = error && (
-    error.toLowerCase().includes("api token") ||
-    error.toLowerCase().includes("authentication failed") ||
-    error.toLowerCase().includes("sign in again") ||
-    error.toLowerCase().includes("invalid api token")
-  );
+  const isTokenError =
+    error &&
+    (error.toLowerCase().includes("api token") ||
+      error.toLowerCase().includes("authentication failed") ||
+      error.toLowerCase().includes("sign in again") ||
+      error.toLowerCase().includes("invalid api token"));
 
   if (isTokenError) {
     return (
@@ -311,103 +311,115 @@ Your Stacks API token is invalid or expired. Please update it in the extension p
 
   // Render based on view preference
   if (isGridView) {
-  return (
-    <Grid
-      columns={columns}
-      aspectRatio="16/9"
-      fit={Grid.Fit.Fill}
-      inset={Grid.Inset.Zero}
-      isLoading={isLoading}
-      searchBarPlaceholder="Search your resources..."
-      onSearchTextChange={setSearchText}
-      pagination={{
-        onLoadMore: () => fetchResources(true),
-        hasMore: hasMore,
-        pageSize: perPage,
-      }}
-      searchBarAccessory={
-        <Grid.Dropdown
-          tooltip="Grid Size"
-          storeValue
-          onChange={(newValue) => {
-            setColumns(parseInt(newValue));
-          }}
-        >
-          <Grid.Dropdown.Section title="Grid Size">
-            <Grid.Dropdown.Item title="Large" value="2" />
-            <Grid.Dropdown.Item title="Medium" value="3" />
-            <Grid.Dropdown.Item title="Small" value="4" />
-          </Grid.Dropdown.Section>
-        </Grid.Dropdown>
-      }
-    >
-      {resources.length > 0 ? (
-          resources.map((resource) => (
-          <Grid.Item
-              key={resource.id}
-            content={{
-              source: resource.thumbnail || getIconForResourceType(resource.type),
-              fallback: getIconForResourceType(resource.type),
-              tintColor: !resource.thumbnail ? Color.PrimaryText : undefined,
+    return (
+      <Grid
+        columns={columns}
+        aspectRatio="16/9"
+        fit={Grid.Fit.Fill}
+        inset={Grid.Inset.Zero}
+        isLoading={isLoading}
+        searchBarPlaceholder="Search your resources..."
+        onSearchTextChange={setSearchText}
+        pagination={{
+          onLoadMore: () => fetchResources(true),
+          hasMore: hasMore,
+          pageSize: perPage,
+        }}
+        searchBarAccessory={
+          <Grid.Dropdown
+            tooltip="Grid Size"
+            storeValue
+            onChange={(newValue) => {
+              setColumns(parseInt(newValue));
             }}
-            title={resource.title}
-            subtitle={resource.domain || resource.url}
-            actions={
-              <ActionPanel>
-                <ActionPanel.Section>
-                  <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
-                  <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
-                  {resource.description && (
+          >
+            <Grid.Dropdown.Section title="Grid Size">
+              <Grid.Dropdown.Item title="Large" value="2" />
+              <Grid.Dropdown.Item title="Medium" value="3" />
+              <Grid.Dropdown.Item title="Small" value="4" />
+            </Grid.Dropdown.Section>
+          </Grid.Dropdown>
+        }
+      >
+        {resources.length > 0 ? (
+          resources.map((resource) => (
+            <Grid.Item
+              key={resource.id}
+              content={{
+                source: resource.thumbnail || getIconForResourceType(resource.type),
+                fallback: getIconForResourceType(resource.type),
+                tintColor: !resource.thumbnail ? Color.PrimaryText : undefined,
+              }}
+              title={resource.title}
+              subtitle={resource.domain || resource.url}
+              actions={
+                <ActionPanel>
+                  <ActionPanel.Section>
+                    <Action.OpenInBrowser url={resource.target_url} title="Open in Browser" icon={Icon.Globe} />
+                    <Action.CopyToClipboard content={resource.target_url} title="Copy URL" icon={Icon.Clipboard} />
+                    {resource.description && (
                       <Action.CopyToClipboard
                         content={resource.description}
                         title="Copy Description"
                         icon={Icon.Text}
                       />
-                  )}
-                </ActionPanel.Section>
-                <ActionPanel.Section>
-                  <Action
-                    title="Refresh"
-                    icon={Icon.ArrowClockwise}
-                    onAction={handleRefresh}
-                    shortcut={{ modifiers: ["cmd"], key: "r" }}
-                  />
+                    )}
+                  </ActionPanel.Section>
+                  <ActionPanel.Section>
+                    <Action
+                      title="Refresh"
+                      icon={Icon.ArrowClockwise}
+                      onAction={handleRefresh}
+                      shortcut={{ modifiers: ["cmd"], key: "r" }}
+                    />
                     <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-                </ActionPanel.Section>
+                  </ActionPanel.Section>
+                </ActionPanel>
+              }
+            />
+          ))
+        ) : (
+          <Grid.EmptyView
+            title={
+              isTokenError
+                ? "Invalid or Expired API Token"
+                : error || (searchText ? `No Results for "${searchText}"` : "No Resources Found")
+            }
+            description={
+              isTokenError
+                ? "Your Stacks API token is invalid or expired. Please update it in Preferences."
+                : error
+                  ? "Please try again or check your connection"
+                  : searchText
+                    ? "Try different search terms or clear the search"
+                    : "Start saving resources to see them here"
+            }
+            icon={
+              isTokenError
+                ? Icon.ExclamationMark
+                : error
+                  ? Icon.ExclamationMark
+                  : searchText
+                    ? Icon.MagnifyingGlass
+                    : Icon.Bookmark
+            }
+            actions={
+              <ActionPanel>
+                <Action
+                  title={isTokenError ? "Open Extension Preferences" : "Refresh"}
+                  icon={isTokenError ? Icon.Gear : Icon.ArrowClockwise}
+                  onAction={isTokenError ? openExtensionPreferences : handleRefresh}
+                  shortcut={{ modifiers: ["cmd"], key: isTokenError ? "k" : "r" }}
+                />
+                {!isTokenError && (
+                  <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+                )}
               </ActionPanel>
             }
           />
-        ))
-      ) : (
-        <Grid.EmptyView
-          title={isTokenError ? "Invalid or Expired API Token" : error || (searchText ? `No Results for \"${searchText}\"` : "No Resources Found")}
-          description={
-            isTokenError
-              ? "Your Stacks API token is invalid or expired. Please update it in Preferences."
-              : error
-                ? "Please try again or check your connection"
-                : searchText
-                  ? "Try different search terms or clear the search"
-                  : "Start saving resources to see them here"
-          }
-          icon={isTokenError ? Icon.ExclamationMark : error ? Icon.ExclamationMark : searchText ? Icon.MagnifyingGlass : Icon.Bookmark}
-          actions={
-            <ActionPanel>
-              <Action
-                title={isTokenError ? "Open Extension Preferences" : "Refresh"}
-                icon={isTokenError ? Icon.Gear : Icon.ArrowClockwise}
-                onAction={isTokenError ? openExtensionPreferences : handleRefresh}
-                shortcut={{ modifiers: ["cmd"], key: isTokenError ? "k" : "r" }}
-              />
-              {!isTokenError && (
-                <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-              )}
-            </ActionPanel>
-          }
-        />
-      )}
-    </Grid>
-  );
+        )}
+      </Grid>
+    );
   } else {
     return (
       <List
@@ -541,7 +553,11 @@ Your Stacks API token is invalid or expired. Please update it in the extension p
           ))
         ) : (
           <List.EmptyView
-            title={isTokenError ? "Invalid or Expired API Token" : error || (searchText ? `No Results for \"${searchText}\"` : "No Resources Found")}
+            title={
+              isTokenError
+                ? "Invalid or Expired API Token"
+                : error || (searchText ? `No Results for "${searchText}"` : "No Resources Found")
+            }
             description={
               isTokenError
                 ? "Your Stacks API token is invalid or expired. Please update it in Preferences."
@@ -551,7 +567,15 @@ Your Stacks API token is invalid or expired. Please update it in the extension p
                     ? "Try different search terms or clear the search"
                     : "Start saving resources to see them here"
             }
-            icon={isTokenError ? Icon.ExclamationMark : error ? Icon.ExclamationMark : searchText ? Icon.MagnifyingGlass : Icon.Bookmark}
+            icon={
+              isTokenError
+                ? Icon.ExclamationMark
+                : error
+                  ? Icon.ExclamationMark
+                  : searchText
+                    ? Icon.MagnifyingGlass
+                    : Icon.Bookmark
+            }
             actions={
               <ActionPanel>
                 <Action

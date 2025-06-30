@@ -13,8 +13,18 @@ interface Arguments {
   url: string;
 }
 
+// Function to validate URL
+function isValidUrl(string: string): boolean {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default async function AddLinkCommand(props: LaunchProps<{ arguments: Arguments }>) {
-  let url = props.arguments?.url || "";
+  const url = props.arguments?.url || "";
 
   try {
     // If no URL provided as argument, prompt user
@@ -25,16 +35,6 @@ export default async function AddLinkCommand(props: LaunchProps<{ arguments: Arg
         message: "Please provide a URL as an argument",
       });
       return;
-    }
-
-    // Function to validate URL
-    function isValidUrl(string: string): boolean {
-      try {
-        new URL(string);
-        return true;
-      } catch (_) {
-        return false;
-      }
     }
 
     // Validate URL format
@@ -55,7 +55,7 @@ export default async function AddLinkCommand(props: LaunchProps<{ arguments: Arg
     });
 
     // Add the link
-    const result = await addLink({
+    await addLink({
       target_url: url.trim(),
     });
 
@@ -67,7 +67,7 @@ export default async function AddLinkCommand(props: LaunchProps<{ arguments: Arg
     });
 
     // Brief delay to let the success toast show before closing
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Navigate to root and close window
     await popToRoot({ clearSearchBar: true });
@@ -75,17 +75,13 @@ export default async function AddLinkCommand(props: LaunchProps<{ arguments: Arg
 
     // Show success HUD
     await showHUD("Link added to Stacks");
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    
+
     // Handle authentication errors specifically
-    const isTokenError = [
-      "api token",
-      "authentication failed",
-      "sign in again",
-      "invalid api token"
-    ].some((tokenMsg) => errorMessage.toLowerCase().includes(tokenMsg));
+    const isTokenError = ["api token", "authentication failed", "sign in again", "invalid api token"].some((tokenMsg) =>
+      errorMessage.toLowerCase().includes(tokenMsg),
+    );
     if (isTokenError) {
       await showToast({
         style: Toast.Style.Failure,
@@ -109,4 +105,3 @@ export default async function AddLinkCommand(props: LaunchProps<{ arguments: Arg
     });
   }
 }
- 
